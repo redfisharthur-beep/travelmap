@@ -41,11 +41,11 @@ function allowRequest(request) {
   const site = request.headers.get("sec-fetch-site");
   if (site && !["same-origin","none"].includes(site)) return false;
   const now = Date.now();
-  const ip = request.headers.get("CF-Connecting-IP") || "unidentified";
+  const ip = (request.headers.get("CF-Connecting-IP") || "unidentified") + (new URL(request.url).pathname === "/api/photo" ? ":photo" : ":search");
   const entry = rateTable.get(ip);
   if (!entry || now - entry.start > 60000) {
     rateTable.set(ip,{start:now,count:1});
-  } else if (++entry.count > 24) return false;
+  } else if (++entry.count > (ip.endsWith(":photo") ? 100 : 24)) return false;
   if (rateTable.size > 2500) {
     for (const [key,val] of rateTable) if (now-val.start > 60000) rateTable.delete(key);
   }

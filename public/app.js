@@ -148,11 +148,13 @@ function createCard(spot) {
   titleRow.appendChild(el("h3","spot-title",spot.name));
   const score = el("div","score");
   score.append(el("strong","",spot.score),el("small","","分"));
-  score.setAttribute("aria-label",`推薦評分 ${spot.score} 分`);
+  score.setAttribute("aria-label",`本站綜合推薦評分 ${spot.score} 分`);
+  score.title = "本站綜合推薦評分";
   titleRow.appendChild(score);
   const desc = el("p","spot-description",spot.feature || "查看景點資訊與近期遊客評價。");
   const link = el("a","map-link","Google Maps");
   link.href = spot.mapsUrl; link.target = "_blank"; link.rel = "noopener noreferrer";
+  link.setAttribute("translate","no");
   main.append(titleRow,desc,link);card.append(picture,main);
   return card;
 }

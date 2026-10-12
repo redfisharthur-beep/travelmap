@@ -96,3 +96,10 @@ select{appearance:none;-webkit-appearance:none;border:1px solid var(--line);back
 @media(max-width:390px){.choice{padding:6px 8px;font-size:11px}.spot-card{grid-template-columns:104px 1fr}.score strong{font-size:18px}.spot-title{font-size:14px}}
 @media(min-aspect-ratio:1/1){:root{--map-width:min(41vw,445px)}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+
+.legal{display:flex;justify-content:center;gap:22px;margin:42px auto 0;font-size:11px}
+.legal a{color:#93988f;text-decoration:none}
+.legal a:hover{text-decoration:underline}
+.legal-page{max-width:700px;margin:6vh auto;padding:30px;color:#4c554c;line-height:1.95}
+.legal-page h1{font-size:24px}
+.legal-page a{color:#586d5e}
