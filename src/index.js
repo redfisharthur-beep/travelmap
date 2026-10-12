@@ -64,7 +64,7 @@ function eligible(place,county,town) {
   const reviews = Number(place.userRatingCount || 0);
   if (!place.id || !name || name.length > 85) return false;
   if (!address.includes(county) || (town && !address.includes(town))) return false;
-  if (place.businessStatus === "CLOSED_PERMANENTLY") return false;
+  if (place.businessStatus === "CLOSED_PERMANENTLY" || place.businessStatus === "CLOSED_TEMPORARILY") return false;
   if ((Number(place.rating)||0) < 3.7 || reviews < 20) return false;
   if ((place.types||[]).some(t=>BLOCK_TYPES.has(t)) || BLOCK_TYPES.has(place.primaryType)) return false;
   if (/飯店|旅館|民宿|汽車旅館|餐廳|咖啡|早午餐|火鍋|手搖飲|停車場|便利商店|超市|診所|補習班/.test(name)) return false;
@@ -77,10 +77,11 @@ function baseScore(rating,count) {
 }
 function googlePhoto(place) {
   const p = (place.photos||[])[0];
-  if (!p?.name) return {photoUrl:null,photoCredit:null};
+  if (!p?.name) return {photoUrl:null,photoCredit:null,photoCreditUrl:null};
   return {
     photoUrl:"/api/photo?name="+encodeURIComponent(p.name),
-    photoCredit: (p.authorAttributions||[]).map(a=>a.displayName).filter(Boolean).slice(0,2).join("、") || "Google Maps"
+    photoCredit: (p.authorAttributions||[]).map(a=>a.displayName).filter(Boolean).slice(0,2).join("、") || "Google Maps",
+    photoCreditUrl: (p.authorAttributions||[]).find(a=>a.uri?.startsWith("https://"))?.uri || null
   };
 }
 async function googleSearch(county,town,key) {

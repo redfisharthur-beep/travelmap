@@ -141,7 +141,11 @@ function createCard(spot) {
     img.referrerPolicy = "no-referrer";
     img.addEventListener("error", () => img.remove());
     picture.appendChild(img);
-    if (spot.photoCredit) picture.appendChild(el("span","photo-credit",spot.photoCredit));
+    if (spot.photoCredit) {
+      const credit = el(spot.photoCreditUrl ? "a" : "span","photo-credit",spot.photoCredit);
+      if (spot.photoCreditUrl) {credit.href=spot.photoCreditUrl;credit.target="_blank";credit.rel="noopener noreferrer";}
+      picture.appendChild(credit);
+    }
   }
   const main = el("div","spot-main");
   const titleRow = el("div","spot-title-row");
