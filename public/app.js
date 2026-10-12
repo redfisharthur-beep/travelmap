@@ -23,6 +23,7 @@ function discoverHero() {
     }
     img.hidden = false;
     home.classList.add("has-hero");
+    if(illustration)renderIllustratedMap(illustration);
   });
   img.addEventListener("error", () => {
     img.hidden = true;
@@ -57,43 +58,105 @@ function decodeMap(topology) {
     polys: g.type === "Polygon" ? [rings(g.arcs)] : g.arcs.map(rings)
   }));
 }
-function mapPoint([lon, lat]) {
-  return [(lon - 119.0) * 136, (25.7 - lat) * 165];
+
+const COUNTY_GROUPS = {
+  "台北市":["台北市","新北市","基隆市"],
+  "新竹縣":["新竹縣","新竹市"],
+  "嘉義縣":["嘉義縣","嘉義市"]
+};
+let illustration = null;
+function groupForCounty(county) {
+  return Object.keys(COUNTY_GROUPS).find(key=>COUNTY_GROUPS[key].includes(county)) || null;
+}
+function createCountyPath(map, name, data) {
+  const ns="http://www.w3.org/2000/svg";
+  const path=document.createElementNS(ns,"path");
+  path.setAttribute("class","county-path illustrated-path");
+  path.setAttribute("d",data);
+  path.setAttribute("role","button");
+  path.setAttribute("tabindex","0");
+  path.setAttribute("aria-label",name);
+  path.setAttribute("fill-rule","evenodd");
+  const title=document.createElementNS(ns,"title"); title.textContent=name;
+  path.appendChild(title);
+  path.addEventListener("click",()=>showCounty(name));
+  path.addEventListener("keydown",e=>{
+    if(e.key==="Enter"||e.key===" "){e.preventDefault();showCounty(name);}
+  });
+  map.appendChild(path);
+}
+function renderIllustratedMap(data) {
+  if(!data || !data.viewBox || !data.regions)return;
+  const [width,height]=data.viewBox;
+  if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0)return;
+  const map=$("countyMap");
+  map.replaceChildren();
+  map.setAttribute("viewBox",`0 0 ${width} ${height}`);
+  map.setAttribute("preserveAspectRatio","none");
+  $("mapArea").classList.add("illustrated-map");
+  // Shapes are extracted from the 15 colored sections *in the artwork*.
+  // They are distinct from administrative boundaries and do not overlap.
+  for(const [name,path] of Object.entries(data.regions)) {
+    if(typeof path==="string"&&path.startsWith("M"))createCountyPath(map,name,path);
+  }
 }
 function renderMap(topology) {
-  const map = $("countyMap");
-  const ns = "http://www.w3.org/2000/svg";
-  for (const region of decodeMap(topology)) {
-    if (region.name === "金門縣" || region.name === "連江縣") continue;
-    const visible = region.polys.map(poly => poly.map(ring => ring.filter(([lon, lat]) => lon > 119.05 && lon < 123 && lat > 21.7 && lat < 26.1))).filter(poly => poly.some(r => r.length > 2));
-    let pathData = "", positions = [];
-    for (const poly of visible) for (const ring of poly) {
-      if (ring.length < 3) continue;
-      const coords = ring.map(mapPoint);
-      pathData += coords.map(([x,y],i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ") + "Z ";
-      positions.push(...coords);
+  const map=$("countyMap");
+  const ns="http://www.w3.org/2000/svg";
+  map.replaceChildren();
+  $("mapArea").classList.remove("illustrated-map");
+  map.setAttribute("viewBox","0 0 450 700");
+  const {scale,translate}=topology.transform;
+  const arcs=new Map();
+  function ringOf(arcsList) {
+    return arcsList.flatMap((n,i)=>{
+      const k=n>=0?n:~n;
+      if(!arcs.has(k)){
+        let x=0,y=0;
+        arcs.set(k,topology.arcs[k].map(([dx,dy])=>{
+          x+=dx;y+=dy;
+          return [x*scale[0]+translate[0],y*scale[1]+translate[1]];
+        }));
+      }
+      const coords=n>=0?arcs.get(k):[...arcs.get(k)].reverse();
+      return i?coords.slice(1):coords;
+    });
+  }
+  const shapes=[];
+  for(const feature of topology.objects.layer1.geometries){
+    const name=norm(feature.properties.COUNTYNAME||feature.properties.name);
+    if(name==="金門縣"||name==="連江縣")continue;
+    const polys=feature.type==="Polygon"?[feature.arcs]:feature.arcs;
+    let path="",area=0;
+    for(const poly of polys)for(const rings of poly){
+      const coords=ringOf(rings);
+      if(coords.length<3)continue;
+      let twiceArea=0;
+      const pts=coords.map(([lon,lat])=>[(lon-119)*136,(25.7-lat)*165]);
+      for(let i=0;i<pts.length;i++){
+        const a=pts[i],b=pts[(i+1)%pts.length];
+        twiceArea+=a[0]*b[1]-b[0]*a[1];
+      }
+      area+=Math.abs(twiceArea);
+      path+=pts.map(([x,y],i)=>(i?"L":"M")+x.toFixed(1)+","+y.toFixed(1)).join(" ")+"Z ";
     }
-    if (!pathData) continue;
-    const path = document.createElementNS(ns, "path");
-    path.setAttribute("class", "county-path");
-    path.setAttribute("d", pathData);
-    path.setAttribute("role", "button");
-    path.setAttribute("tabindex", "0");
-    path.setAttribute("aria-label", region.name);
-    path.appendChild(document.createElementNS(ns, "title")).textContent = region.name;
-    path.addEventListener("click", () => showCounty(region.name));
-    path.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showCounty(region.name); } });
+    shapes.push({name,path,area});
+  }
+  shapes.sort((a,b)=>b.area-a.area);
+  for(const item of shapes)if(item.path){
+    const path=document.createElementNS(ns,"path");
+    path.setAttribute("class","county-path");
+    path.setAttribute("d",item.path);
+    path.setAttribute("fill-rule","evenodd");
+    path.setAttribute("role","button");
+    path.setAttribute("tabindex","0");
+    path.setAttribute("aria-label",item.name);
+    const title=document.createElementNS(ns,"title"); title.textContent=item.name;
+    path.appendChild(title);
+    const activate=()=>showCounty(item.name);
+    path.addEventListener("click",activate);
+    path.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();activate();}});
     map.appendChild(path);
-    if (positions.length && region.name !== "澎湖縣") {
-      const xs = positions.map(p => p[0]), ys = positions.map(p => p[1]);
-      let x = (Math.min(...xs) + Math.max(...xs)) / 2, y = (Math.min(...ys) + Math.max(...ys)) / 2;
-      const label = document.createElementNS(ns, "text");
-      label.setAttribute("class", "county-name");
-      label.setAttribute("x", x); label.setAttribute("y", y);
-      label.setAttribute("text-anchor", "middle");
-      label.textContent = region.name.replace(/[縣市]$/,"");
-      map.appendChild(label);
-    }
   }
 }
 function setButtons(groupId, value) {
@@ -102,6 +165,14 @@ function setButtons(groupId, value) {
     button.classList.toggle("active", selected);
     button.setAttribute("aria-pressed", String(selected));
   });
+}
+function updateCountyChoices() {
+  const group = groupForCounty(state.county);
+  const select = $("countySelect");
+  $("countyPicker").hidden = !group;
+  select.replaceChildren();
+  if(group){for(const county of COUNTY_GROUPS[group])select.add(new Option(county,county));}
+  select.value=state.county;
 }
 function updateTownChoices() {
   const select = $("townSelect");
@@ -122,6 +193,7 @@ async function showCounty(county, push = true) {
   $("countyTitle").textContent = state.county;
   setButtons("priceFilter", state.price);
   setButtons("typeFilter", state.type);
+  updateCountyChoices();
   updateTownChoices();
   home.hidden = true; details.hidden = false;
   document.title = state.county + "景點推薦 | 台灣景點地圖";
@@ -215,6 +287,14 @@ document.addEventListener("click", e => {
   if (island) showCounty(island.dataset.county);
 });
 $("townSelect").addEventListener("change", e => {state.town = e.target.value;loadPlaces();});
+$("countySelect").addEventListener("change", e => {
+  if(!e.target.value)return;
+  state.county=e.target.value;state.town="";state.results=[];
+  $("countyTitle").textContent=state.county;
+  document.title=state.county+"景點推薦 | 台灣景點地圖";
+  history.replaceState({county:state.county},"","?county="+encodeURIComponent(state.county));
+  updateTownChoices();loadPlaces();
+});
 $("returnBtn").addEventListener("click", () => history.length > 1 && history.state?.county ? history.back() : navigateHome());
 window.addEventListener("popstate", () => {
   const county = new URLSearchParams(location.search).get("county");
@@ -226,7 +306,12 @@ async function start() {
   try {
     const [ts, cs] = await Promise.all([fetch("/data/towns.json"),fetch("/data/counties.topo.json")]);
     townList = await ts.json();
-    renderMap(await cs.json());
+    const topology=await cs.json();
+    renderMap(topology);
+    try {
+      const response=await fetch("/data/illustrated-regions.json");
+      if(response.ok){illustration=await response.json();if(home.classList.contains("has-hero"))renderIllustratedMap(illustration);}
+    }catch(error){console.warn("旅遊地圖色塊載入失敗，使用行政區備援",error);}
   } catch (error) {
     console.error("地圖資料載入失敗",error);
     const fallback = el("div","county-fallback");

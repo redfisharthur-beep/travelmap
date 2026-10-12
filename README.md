@@ -22,9 +22,13 @@
 - 香港及境外景點會被排除；搜尋結果需有相符縣市地址，避免行政區偏移造成的誤入。
 - 介面不使用 emoji / 箭頭圖案。
 
-## 首頁圖片對位
+## 首頁圖片點選區
 
-`public/styles.css` 的 `--map-width`, `--map-top`, `--map-left` 決定透明縣市 SVG 點選區的位置。因尚未提供首頁圖片，需上傳後按圖片內台灣地圖的實際大小對位。缺圖時會顯示可點選的縣市地圖，不會顯示假圖片。
+首頁使用 `public/assets/home.webp` 作為底圖，`public/data/illustrated-regions.json` 是依照實際插畫上 15 個彩色分區所追蹤的 SVG 多邊形熱區，所有座標使用 **1086 × 1448 圖像相對座標**，隨桌機、平板、手機與圖片一同比例縮放，不以額外的行政區地圖覆蓋插畫。
+
+插圖僅有 15 個獨立色塊，部分縣市共用：點選台北市圖案，可於下一層切換台北／新北／基隆；新竹縣可切換新竹市；嘉義縣可切換嘉義市。金門、馬祖、澎湖另有獨立文字按鈕。缺少首頁圖或圖像對應資料時，會改用完整行政區輪廓備援。
+
+**注意：** 熱區是對插畫的顏色與黑線分區描圖，而非法定縣市界；若換了另一張首頁圖片，需同步更新 `illustrated-regions.json`，否則點擊位置會不符。
 
 ## 設計與版權
 
@@ -35,6 +39,7 @@
 - `public/index.html`：首頁／縣市景點列表
 - `public/styles.css`：版面與色彩
 - `public/app.js`：篩選、地圖互動、畫面
-- `public/data/counties.topo.json`：縣市形狀
+- `public/data/illustrated-regions.json`：對應首頁插畫的 15 個精準熱區
+- `public/data/counties.topo.json`：圖片缺失時的行政區備援
 - `public/data/towns.json`：鄉鎮市區清單
 - `src/index.js`：Cloudflare Worker API；Google Places / LangSearch / Workers AI
