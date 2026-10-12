@@ -13,8 +13,21 @@ function el(tag, className, text) {
 }
 function discoverHero() {
   const img = $("heroImage");
-  img.addEventListener("load", () => { img.hidden = false; home.classList.add("has-hero"); });
-  img.addEventListener("error", () => { img.hidden = true; home.classList.remove("has-hero"); });
+  img.addEventListener("load", () => {
+    // Use the actual image dimensions: the same artwork and county hit areas
+    // now scale as one contained image on mobile, tablet and desktop.
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+    if (width > 0 && height > 0) {
+      $("heroStage").style.setProperty("--hero-ratio", String(width / height));
+    }
+    img.hidden = false;
+    home.classList.add("has-hero");
+  });
+  img.addEventListener("error", () => {
+    img.hidden = true;
+    home.classList.remove("has-hero");
+  });
   img.src = HERO_FILE;
 }
 function decodeMap(topology) {

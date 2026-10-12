@@ -14,18 +14,20 @@
 </head>
 <body>
   <section id="home" class="home" aria-label="點選台灣縣市">
-    <img id="heroImage" class="hero-image" alt="台灣旅遊地圖" hidden>
     <div class="home-fallback" aria-hidden="true">
       <div class="fallback-title">台灣旅行地圖</div>
       <div class="fallback-subtitle">選一座城市，找到值得出發的地方</div>
     </div>
-    <div id="mapArea" class="map-area">
-      <svg id="countyMap" class="county-map" viewBox="0 0 450 700" role="group" aria-label="台灣縣市選擇地圖"></svg>
-    </div>
-    <div class="island-choices">
-      <button type="button" data-county="金門縣">金門縣</button>
-      <button type="button" data-county="連江縣">連江縣</button>
-      <button type="button" data-county="澎湖縣">澎湖縣</button>
+    <div id="heroStage" class="hero-stage">
+      <img id="heroImage" class="hero-image" alt="台灣旅遊地圖" decoding="async" fetchpriority="high" hidden>
+      <div id="mapArea" class="map-area">
+        <svg id="countyMap" class="county-map" viewBox="0 0 450 700" role="group" aria-label="台灣縣市選擇地圖"></svg>
+      </div>
+      <div class="island-choices">
+        <button type="button" data-county="金門縣">金門縣</button>
+        <button type="button" data-county="連江縣">連江縣</button>
+        <button type="button" data-county="澎湖縣">澎湖縣</button>
+      </div>
     </div>
   </section>
   <section id="details" class="details" hidden>
